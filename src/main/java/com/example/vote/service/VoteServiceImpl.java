@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 基于公式的索引法
+ * 通过数学公式直接计算每个排列的索引，避免生成所有数据后再筛选。
+ */
 @Service
 public class VoteServiceImpl implements VoteService {
 
@@ -30,7 +34,6 @@ public class VoteServiceImpl implements VoteService {
 
     // 获取每条投票记录的所有排列组合，并统计每个组合的出现次数
     public Map<String, Long> getAllCombinations(List<Vote> votes) {
-        // 使用stream来计算每个排列组合并按betType排序
         return votes.stream()
                 .flatMap(vote -> {
                     // 提取bet1, bet2, bet3中的"1"所在的位置
@@ -66,23 +69,52 @@ public class VoteServiceImpl implements VoteService {
 
     // 计算bet1, bet2, bet3的所有排列组合
     private List<List<Integer>> getCombinations(List<Integer> bet1Positions, List<Integer> bet2Positions, List<Integer> bet3Positions) {
-        List<List<Integer>> combinations = new ArrayList<>();
+        // 合并所有位置
+        List<Integer> allPositions = new ArrayList<>();
+        allPositions.addAll(bet1Positions);
+        allPositions.addAll(bet2Positions);
+        allPositions.addAll(bet3Positions);
 
-        // 使用三个循环生成所有可能的组合（笛卡尔积）
-        for (Integer b1 : bet1Positions) {
-            for (Integer b2 : bet2Positions) {
-                for (Integer b3 : bet3Positions) {
-                    // 生成一个组合
-                    List<Integer> combination = new ArrayList<>();
-                    combination.add(b1);
-                    combination.add(b2);
-                    combination.add(b3);
-                    combinations.add(combination);
-                }
+        // 调用非递归方法生成所有排列
+        return generateAllPermutationsIteratively(allPositions, 3); // 3 为排列长度
+    }
+
+    // 使用迭代生成所有排列
+    private List<List<Integer>> generateAllPermutationsIteratively(List<Integer> elements, int k) {
+        List<List<Integer>> permutations = new ArrayList<>();
+        int n = elements.size();
+
+        if (k > n) return permutations;
+
+        // 初始化一个数组存储当前排列的索引
+        int[] indices = new int[k];
+        for (int i = 0; i < k; i++) {
+            indices[i] = i;
+        }
+
+        while (true) {
+            // 根据当前索引生成一个排列
+            List<Integer> currentPermutation = new ArrayList<>();
+            for (int index : indices) {
+                currentPermutation.add(elements.get(index));
+            }
+            permutations.add(currentPermutation);
+
+            // 生成下一个排列的索引
+            int i = k - 1;
+            while (i >= 0 && indices[i] == n - k + i) {
+                i--;
+            }
+
+            if (i < 0) break; // 所有排列已生成，退出循环
+
+            indices[i]++;
+            for (int j = i + 1; j < k; j++) {
+                indices[j] = indices[j - 1] + 1;
             }
         }
 
-        return combinations;
+        return permutations;
     }
 
     // 打印排列组合及其出现次数
